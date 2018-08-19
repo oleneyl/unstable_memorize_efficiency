@@ -116,6 +116,13 @@ class Infinity():
         self.on = False
         self.left = 0
         self.cont = 0
+        self.full_increment = self.calc_full_damage_factor()
+        
+    def calc_full_damage_factor(self):
+        damage = 0
+        for tick in range(0, INFINITY_REMAIN, 1000):
+            damage += (1 + 0.65 + 0.03 * (tick //4000))
+        return damage * 1000
         
     def get_increment(self):
         if self.on:
@@ -152,6 +159,7 @@ class Infinity():
 
                 
 def simulate(_type, tot_time, term, logging = False):
+    
     time = 0
     inf_real = Infinity()
     inf_virt = Infinity("infinity_virt")
@@ -159,10 +167,10 @@ def simulate(_type, tot_time, term, logging = False):
     deal = 0
     garbage_time = 0
     
-    def pass_time(time):
-        inf_virt.pass_time(time)
-        inf_real.pass_time(time)
-        uns_mem.pass_time(time)
+    def pass_time(t):
+        inf_virt.pass_time(t)
+        inf_real.pass_time(t)
+        uns_mem.pass_time(t)
 
     def print_log():
         print("-------At time %d--------" % (time))
@@ -171,11 +179,12 @@ def simulate(_type, tot_time, term, logging = False):
         uns_mem.print_status()
         print("deal : %d, garbage_time : %d" % (deal, garbage_time))
 
-    for time in range(0, tot_time, term):
+    while time < tot_time:
         if logging : print_log()
         if inf_virt.on or inf_real.on:
-            deal += max(inf_real.get_increment(), inf_virt.get_increment()) * term
-            pass_time(term)
+            deal += inf_real.full_increment
+            pass_time(INFINITY_REMAIN)
+            time += INFINITY_REMAIN
             continue
         else:
             #No infinity is turned on, first check whether real infinity is usable
@@ -184,6 +193,7 @@ def simulate(_type, tot_time, term, logging = False):
                 inf_real.use()
             else:
                 #If real infinity is not usable, use unstable memoruze if available
+                inf_flag = False
                 if uns_mem.is_usable():
                     delay, is_inf = uns_mem.use()
                     if logging : print("\nUns mem used, delay %d, is_inf : %r\n" % (delay, is_inf))
@@ -191,8 +201,11 @@ def simulate(_type, tot_time, term, logging = False):
                     if is_inf:
                         if logging : print("\n******unstable infinity used******\n")
                         inf_virt.use_force()
-            pass_time(term)
-            deal += max(inf_real.get_increment(), inf_virt.get_increment()) * term
+                        inf_flag = True
+                if not inf_flag:
+                    pass_time(term)
+                    time += term
+                    deal += max(inf_real.get_increment(), inf_virt.get_increment()) * term
 
     #print("Total time %d, deal : %d, garbage_time : %d" % (tot_time, deal, garbage_time))
     dps = (deal * (tot_time - garbage_time) / (tot_time) / (tot_time))
@@ -237,8 +250,8 @@ if __name__ == "__main__":
         dps_1 = 0
         dps_2 = 0
         for i in range(10):
-            dps_1 += simulate(_type, 1000 * 720000, 100)
-            dps_2 += simulate_nouns(_type, 1000 * 720000, 100)    
+            dps_1 += simulate(_type, 1000 * 720000, 50)
+            dps_2 += simulate_nouns(_type, 1000 * 3600, 50)    
         if _type == 0:
             name = "MAGE_FB"
         elif _type == 1:

@@ -102,7 +102,7 @@ class Uns_mem():
                 is_inf = False
                 if key == "infinity":
                     is_inf = True
-                return self.setting[key]["delay"] + UNS_DELAY, is_inf
+                return self.setting[key]["delay"] * 0.5 + UNS_DELAY, is_inf
         
         print(tag)
         raise ValueError
